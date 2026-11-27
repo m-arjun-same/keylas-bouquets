@@ -155,10 +155,29 @@ footer .giant{margin:0 auto;max-width:100%}
 .ftag{text-align:center;color:var(--ink);font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:13px;letter-spacing:.05em;text-transform:uppercase;margin-top:26px}
 .frow{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1280px;margin:52px auto 0;padding:22px 24px 0;border-top:1px solid var(--line);color:var(--variant);font-size:14px}
 .frow a{color:var(--ink);text-decoration:none;padding:8px 0;display:inline-block}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}.mtrack{animation:none!important}}
+/* motion upgrade — own code, mirror-animmasterlib scroll-5 (drifting photos) + existing GSAP/Lenis, no new dependency, no red block sweep */
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--red);transform:scaleX(0);transform-origin:0 50%;z-index:60;pointer-events:none}
+header{transition:box-shadow .3s var(--ease)}
+header.scrolled{box-shadow:0 1px 0 var(--line)}
+.hero-img img{will-change:transform}
+.hero-img{will-change:transform}
+.pill{transition:border-color .3s var(--ease),background .3s var(--ease),transform .3s var(--ease)}
+.pill:hover{transform:translateY(-2px)}
+.reel img{will-change:transform;transform:scale(1.12)}
+.lab-imgs{overflow:hidden}
+.lab-imgs img{will-change:transform;transform:scale(1.1)}
+.intro-photo{will-change:transform}
+.prow-thumb img{transition:transform .6s var(--ease)}
+.prow.active .prow-thumb img{transform:scale(1.06)}
+.skill h3{transition:color .35s var(--ease),transform .45s var(--ease)}
+.skill.active h3{transform:translateX(8px)}
+.btn,.send{transition:background .3s var(--ease),color .3s var(--ease),transform .3s var(--ease)}
+.btn:hover,.send:hover{transform:translateY(-1px)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}.mtrack{animation:none!important}.progress{display:none}}
 </style>
 </head>
 <body>
+<div class="progress" aria-hidden="true"></div>
 <header><div class="wrap hbar">
   <a class="wordmark" href="#top">Keyla&rsquo;s <span>Bouquets</span></a>
   <nav class="main" aria-label="Main">
@@ -346,11 +365,46 @@ footer .giant{margin:0 auto;max-width:100%}
 <script>
 (function(){
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(!reduce && window.Lenis){ try{ var lenis=new Lenis({duration:1.1,easing:function(t){return 1-Math.pow(1-t,4)}}); function raf(t){lenis.raf(t);requestAnimationFrame(raf)} requestAnimationFrame(raf);}catch(e){} }
+  var lenis=null;
+  if(!reduce && window.Lenis){ try{ lenis=new Lenis({duration:1.1,easing:function(t){return 1-Math.pow(1-t,4)}}); function raf(t){lenis.raf(t);requestAnimationFrame(raf)} requestAnimationFrame(raf);}catch(e){} }
+  // smooth anchors through Lenis, so nav/pills glide instead of jumping
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var t=document.querySelector(a.getAttribute('href'));
+      if(!t) return; e.preventDefault();
+      if(lenis) lenis.scrollTo(t,{offset:-70}); else t.scrollIntoView({behavior:reduce?'auto':'smooth'});
+    });
+  });
+  // header state on scroll
+  var hdr=document.querySelector('header');
+  function onScrollY(y){ if(hdr) hdr.classList.toggle('scrolled',y>10); }
+  if(lenis) lenis.on('scroll',function(e){ onScrollY(e.scroll); });
+  window.addEventListener('scroll',function(){ onScrollY(window.scrollY||0); },{passive:true});
   if(window.gsap && !reduce){
     gsap.from('.mask > span',{yPercent:110,duration:1.1,stagger:.12,ease:'expo.out',delay:.15});
+    gsap.from('.hero .lede',{y:16,opacity:0,duration:.8,ease:'expo.out',delay:.45});
+    gsap.from('.hero .pill',{y:16,opacity:0,duration:.7,stagger:.07,ease:'expo.out',delay:.55});
     if(window.ScrollTrigger){ gsap.registerPlugin(ScrollTrigger);
       gsap.utils.toArray('.reveal').forEach(function(el){ gsap.from(el,{opacity:0,y:28,duration:1,ease:'expo.out',scrollTrigger:{trigger:el,start:'top 88%'}}); });
+      // scroll progress bar
+      gsap.to('.progress',{scaleX:1,ease:'none',scrollTrigger:{trigger:document.body,start:'top top',end:'bottom bottom',scrub:.3}});
+      // hero photo parallax + settle, copy drifts up slightly
+      gsap.fromTo('.hero-img img',{scale:1.12,yPercent:-4},{scale:1,yPercent:4,ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:true}});
+      gsap.to('.hero-copy',{y:-24,ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:true}});
+      // showreel parallax
+      gsap.fromTo('.reel img',{yPercent:-8},{yPercent:8,ease:'none',scrollTrigger:{trigger:'.reel',start:'top bottom',end:'bottom top',scrub:true}});
+      // Art Lab drift — scroll-5: two photos drift opposite directions
+      gsap.utils.toArray('.lab-imgs img').forEach(function(img,i){
+        gsap.fromTo(img,{yPercent:i%2?-10:10},{yPercent:i%2?10:-10,ease:'none',scrollTrigger:{trigger:'.lab-imgs',start:'top bottom',end:'bottom top',scrub:true}});
+      });
+      // intro photo settles flat as you scroll past it
+      gsap.to('.intro-photo',{rotate:-1,y:-16,ease:'none',scrollTrigger:{trigger:'.intro-sec',start:'top bottom',end:'bottom top',scrub:true}});
+      // skillset titles stagger in
+      gsap.from('.skill',{x:-24,opacity:0,duration:.8,stagger:.12,ease:'expo.out',scrollTrigger:{trigger:'.skill-sec',start:'top 80%'}});
+      // footer wordmark rises in
+      gsap.from('.giant',{yPercent:32,opacity:0,duration:1,ease:'expo.out',scrollTrigger:{trigger:'footer',start:'top 92%'}});
+      // contact panel lifts in
+      gsap.from('.contact-sec .panel',{y:32,opacity:0,duration:.9,ease:'expo.out',scrollTrigger:{trigger:'.contact-sec .panel',start:'top 88%'}});
     }
   }
   // intro: word-by-word grey -> black, stays black once revealed
