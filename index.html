@@ -165,7 +165,7 @@ header.scrolled{box-shadow:0 1px 0 var(--line)}
 .pill:hover{transform:translateY(-2px)}
 .reel img{will-change:transform;transform:scale(1.12)}
 .lab-imgs{overflow:hidden}
-.lab-imgs img{will-change:transform;transform:scale(1.1)}
+.lab-imgs img{will-change:transform}
 .intro-photo{will-change:transform}
 .prow-thumb img{transition:transform .6s var(--ease)}
 .prow.active .prow-thumb img{transform:scale(1.06)}
@@ -394,8 +394,10 @@ header.scrolled{box-shadow:0 1px 0 var(--line)}
       // showreel parallax
       gsap.fromTo('.reel img',{yPercent:-8},{yPercent:8,ease:'none',scrollTrigger:{trigger:'.reel',start:'top bottom',end:'bottom top',scrub:true}});
       // Art Lab drift — scroll-5: two photos drift opposite directions
+      // Fix: CSS transform scale(1.1) on the imgs fought GSAP's yPercent, so no drift showed.
+      // Scale now lives inside the tween, drift is in px.
       gsap.utils.toArray('.lab-imgs img').forEach(function(img,i){
-        gsap.fromTo(img,{yPercent:i%2?-10:10},{yPercent:i%2?10:-10,ease:'none',scrollTrigger:{trigger:'.lab-imgs',start:'top bottom',end:'bottom top',scrub:true}});
+        gsap.fromTo(img,{y:i%2?-18:18,scale:1.12},{y:i%2?18:-18,scale:1.12,ease:'none',scrollTrigger:{trigger:'.lab-imgs',start:'top bottom',end:'bottom top',scrub:true}});
       });
       // intro photo settles flat as you scroll past it
       gsap.to('.intro-photo',{rotate:-1,y:-16,ease:'none',scrollTrigger:{trigger:'.intro-sec',start:'top bottom',end:'bottom top',scrub:true}});
